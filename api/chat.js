@@ -14,28 +14,37 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "You are a luxury real estate assistant for Villagrand Real Estate in the Algarve. Speak professionally and concisely."
+            content: "You are a luxury real estate assistant for Villagrand Real Estate in the Algarve. Speak professionally, clearly, and concisely."
           },
           {
             role: "user",
             content: message
           }
-        ]
+        ],
+        temperature: 0.7
       })
     });
 
-    const data = await response.json();
+    // ✅ IMPORTANT FIX
+    const text = await response.text();
+    console.log("RAW RESPONSE:", text);
 
-    const reply =
-      data?.choices?.[0]?.message?.content ||
-      "No response from AI";
+    let reply = "No response from AI";
+
+    try {
+      const data = JSON.parse(text);
+      reply = data?.choices?.[0]?.message?.content || text;
+    } catch (e) {
+      reply = text;
+    }
 
     res.status(200).json({ reply });
 
   } catch (error) {
-    console.error(error);
+    console.error("SERVER ERROR:", error);
     res.status(500).json({
       reply: "Error connecting to AI."
     });
   }
 }
+``

@@ -1,49 +1,27 @@
 export default async function handler(req, res) {
   try {
     const body = req.body || {};
-    const message = body.message || "Hello";
+    const message = body.message || "";
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://barbara.primepropertiesportugal.workers.dev", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are a luxury real estate assistant for Villagrand Real Estate in the Algarve. Speak professionally, clearly, and concisely."
-          },
-          {
-            role: "user",
-            content: message
-          }
-        ],
-        temperature: 0.7
-      })
+      body: JSON.stringify({ message })
     });
 
-    // ✅ IMPORTANT FIX
-    const text = await response.text();
-    console.log("RAW RESPONSE:", text);
+    const data = await response.json();
 
-    let reply = "No response from AI";
-
-    try {
-      const data = JSON.parse(text);
-      reply = data?.choices?.[0]?.message?.content || text;
-    } catch (e) {
-      reply = text;
-    }
-
-    res.status(200).json({ reply });
+    res.status(200).json({
+      reply: data.reply
+    });
 
   } catch (error) {
-    console.error("SERVER ERROR:", error);
+    console.error("ERROR:", error);
+
     res.status(500).json({
-      reply: "Error connecting to AI."
+      reply: "Sorry, something went wrong connecting to the property assistant."
     });
   }
 }

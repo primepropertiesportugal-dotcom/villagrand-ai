@@ -21,8 +21,7 @@ export default async function handler(req, res) {
     console.error("ERROR:", error);
 
     res.status(500).json({
-      reply: "Sorry, something went wrong connecting to the property assistant."
+      reply: "Error connecting to property assistant."
     });
   }
 }
-``

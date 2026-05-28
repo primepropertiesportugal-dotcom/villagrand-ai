@@ -1,8 +1,17 @@
+let conversationHistory = [];
+
 export default async function handler(req, res) {
   try {
     const message = req.body?.message || "";
 
-    // 1️⃣ Get properties from your Worker
+    // ✅ keep last messages (memory)
+    conversationHistory.push({ role: "user", content: message });
+
+    if (conversationHistory.length > 10) {
+      conversationHistory.shift();
+    }
+
+    // ✅ get property data
     const dataRes = await fetch("https://barbara.primepropertiesportugal.workers.dev", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -11,7 +20,6 @@ export default async function handler(req, res) {
 
     const propertyData = await dataRes.json();
 
-    // 2️⃣ Send BOTH user + property context to AI
     const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -23,35 +31,78 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: `You are a high-end real estate advisor for Villagrand Real Estate.
+            content: `
+You are Barbara, senior advisor at Villagrand Real Estate.
 
-You operate across Portugal (not only Algarve).
+CRITICAL:
 
-IMPORTANT RULES:
-- Speak naturally like a real agent, not like a chatbot.
-- Do not give long explanations.
-- Do not ask multiple questions at once.
-- Guide conversation step by step.
-- Only suggest properties AFTER understanding the client.
+- You introduce yourself ONLY ONCE at the beginning:
+  "Good afternoon, Barbara here from Villagrand Real Estate."
 
-If property data is available, use it naturally (do not dump it).
+- After that, you NEVER introduce yourself again.
 
-Tone:
-- calm, confident, professional
-- minimal words
-- no marketing language
+- You remember everything the client already said.
+
+- NEVER repeat questions already asked.
+- NEVER ignore previously given information.
+
+---
+
+STYLE:
+
+- Short
+- Controlled
+- Professional
+- No fluff
+- No long paragraphs
+
+---
+
+CONVERSATION BEHAVIOUR:
+
+- One step at a time
+- One question at a time
+- Do not interrogate
+- Do not lecture
+
+---
+
+POSITIONING:
+
+- Portugal-wide (NOT Algarve only)
+
+---
+
+PROPERTY DATA:
+
+${propertyData.reply || ""}
+
+- Only use properties when relevant
+- Do NOT dump listings
+- Only show them when enough info is known
+
+---
+
+EXAMPLE FLOW:
+
+Client: hi  
+→ Good afternoon, Barbara here from Villagrand Real Estate.  
+→ Are you looking for something specific?
+
+Client: plot vale do lobo  
+→ Understood. Do you have a budget range in mind?
+
+Client: 5 million  
+→ Then show relevant options
+
+---
+
+You behave like a real experienced agent, not a chatbot.
 `
           },
-          {
-            role: "system",
-            content: `Property data:\n${propertyData.reply || ""}`
-          },
-          {
-            role: "user",
-            content: message
-          }
+          ...conversationHistory
         ],
-        temperature: 0.7
+        temperature: 0.6
       })
     });
 
@@ -66,10 +117,13 @@ Tone:
       reply = text;
     }
 
+    // ✅ remember AI response too
+    conversationHistory.push({ role: "assistant", content: reply });
+
     res.status(200).json({ reply });
 
   } catch (err) {
-    res.status(500).json({ reply: "Error connecting to assistant." });
+    res.status(500).json({ reply: "Error." });
   }
 }
-``
+
